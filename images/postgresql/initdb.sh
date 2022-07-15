@@ -3,12 +3,12 @@ PGBIN=/etc/init.d/postgresql
 
 $PGBIN start
 
-echo ' * Create user $ONECUSER:'
+echo ' * Create user $SERVICEUSER:'
 
-su postgres -c 'psql --command "create user $ONECUSER WITH PASSWORD '\''$ONECPASSWORD'\'';"'
-su postgres -c 'psql --command "alter role $ONECUSER WITH LOGIN CREATEDB;"'
-export PGUSER=$ONECUSER
-export PGPASSWORD=$ONECPASSWORD
+su postgres -c 'psql --command "create user $SERVICEUSER WITH PASSWORD '\''$SERVICEPASSWORD'\'';"'
+su postgres -c 'psql --command "alter role $SERVICEUSER WITH LOGIN CREATEDB;"'
+export PGUSER=$SERVICEUSER
+export PGPASSWORD=$SERVICEPASSWORD
 
 echo ' * Create user $PGUSER:'
 

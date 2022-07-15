@@ -3,8 +3,8 @@ FROM ubuntu
 EXPOSE 5432
 
 ENV TZ=Asia/Yekaterinburg
-ENV ONECUSER onecversion
-ENV ONECPASSWORD onecversion
+ENV SERVICEUSER onecversion
+ENV SERVICEPASSWORD onecversion
 ENV PGDATA /var/lib/postgresql/14/main
 
 STOPSIGNAL SIGINT
