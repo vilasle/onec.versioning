@@ -1,0 +1,28 @@
+version: '3'                                                                                                                                                             
+                                                                                                                                                                         
+services:                                                                                                                                                                
+                                                                                                                                                                         
+  zookeeper:                                                                                                                                                             
+    container_name: zookeeper                                                                                                                                            
+    build: zookeeper/                                                                                                                                                    
+    restart: always
+    ports:                                                                                                                                                               
+      - 2185:2185                                                                                                                                                        
+    volumes:                                                                                                                                                             
+      - ./zookeeper/conf:/opt/zookeeper/conf                                                                                                                             
+      - ./zookeeper/data:/tmp/zookeeper                                                                                                                                  
+  kafka:                                                                                                                                                                 
+    container_name: kafka                                                                                                                                                
+    build: kafka/  
+    restart: always                                                                                                                                                      
+    depends_on:                                                                                                                                                          
+      - zookeeper                                                                                                                                                        
+    ports:                                                                                                                                                               
+      - 9092:9092                                                                                                                                                        
+    volumes:                                                                                                                                                             
+      - ./kafka/conf:/opt/kafka/config                                                                                                                                   
+      - ./kafka/docdata:/tmp/kafka-logs   
+networks:                                                                                                                                                                
+  default:                                                                                                                                                               
+    external:                                                                                                                                                            
+      name: kafka    

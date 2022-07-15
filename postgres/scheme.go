@@ -14,13 +14,15 @@ type Scheme struct {
 }
 
 type Table struct {
-	Alias      string  `json:"metadata"`
+	Alias      string  `json:"alias"`
+	Name       string  `json:"metadata"`
 	Table      string  `json:"table"`
 	ChildTable bool    `json:"chilTable"`
 	Fields     []Field `json:"fields"`
 }
 
 type Field struct {
+	Table string `json:"table"`
 	Name  string `json:"name"`
 	Alias string `json:"alias"`
 }
@@ -39,7 +41,7 @@ func LoadScheme(fd *os.File) error {
 	if err := sch.loadToDB(); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -64,4 +66,3 @@ func getFromJson(r io.Reader) (sch *Scheme, err error) {
 	}
 	return &sc, nil
 }
-
