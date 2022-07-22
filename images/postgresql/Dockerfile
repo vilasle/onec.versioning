@@ -11,8 +11,7 @@ STOPSIGNAL SIGINT
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone && \
-    apt-get update && apt-get install -y postgresql-14
-
+    apt-get update && apt-get install -y postgresql-14 vim
 
 COPY initdb.sh /tmp/
 COPY create_tables.sql /tmp/
