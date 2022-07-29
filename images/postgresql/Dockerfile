@@ -20,8 +20,12 @@ RUN /tmp/initdb.sh && rm -rf  /tmp/*
 
 USER postgres
 
+VOLUME [ "/etc/postgresql/14/main", "/var/lib/postgresql/14/main" ]
+
+
 COPY conf/pg_hba.conf /var/lib/postgresql/14/main/pg_hba.conf
 COPY conf/postgresql.conf /var/lib/postgresql/14/main/postgresql.conf
 COPY conf/pg_hba.conf /etc/postgresql/14/main/pg_hba.conf
+
 
 ENTRYPOINT [ "/usr/lib/postgresql/14/bin/postgres" ]

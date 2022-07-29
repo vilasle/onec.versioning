@@ -2,9 +2,11 @@ FROM ubuntu
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
+STOPSIGNAL SIGINT
+
 EXPOSE 2181
 
-RUN apt-get update && apt-getп install -y \
+RUN apt-get update && apt-get install -y \
      openjdk-8-jre-headless wget && \
      wget -O /tmp/zookeeper.tar.gz https://dlcdn.apache.org/zookeeper/zookeeper-3.7.1/apache-zookeeper-3.7.1-bin.tar.gz && \
      tar -xvf /tmp/zookeeper.tar.gz -C /opt && \
@@ -14,7 +16,9 @@ RUN apt-get update && apt-getп install -y \
 
 WORKDIR /opt/zookeeper
 
-VOLUME ["/opt/zookeeper/conf", "/tmp/zookeeper"]
+VOLUME ["/tmp/zookeeper"]
+
+ADD ./conf /opt/zookeeper/conf
 
 ENTRYPOINT ["/opt/zookeeper/bin/zkServer.sh"]
 

@@ -2,6 +2,8 @@ FROM ubuntu
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
+STOPSIGNAL SIGINT
+
 EXPOSE 9092
 
 RUN apt-get update && apt-get install -y \
@@ -13,7 +15,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /opt/kafka
 
-VOLUME ["/opt/kafka/config", "/tmp/kafka-logs"]
+VOLUME ["/tmp/kafka-logs"]
+
+ADD ./conf /opt/kafka/config 
 
 ENTRYPOINT ["/opt/kafka/bin/kafka-server-start.sh"]
 

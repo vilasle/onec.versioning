@@ -203,7 +203,7 @@ func confConnection() PGAuth {
 	return PGAuth{
 		User:     "onecversion",
 		Password: "onecversion",
-		Host:     "172.19.0.2",
+		Host:     "172.19.2.2",
 		Port:     5432,
 		SslMode:  false,
 		Dbname:   "onecversion",
