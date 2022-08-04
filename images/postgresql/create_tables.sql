@@ -24,8 +24,9 @@ CREATE TABLE field (
     id serial PRIMARY KEY, 
     field_name VARCHAR(250) NOT NULL, 
     alias VARCHAR(250) NOT NULL, 
-    vt BOOLEAN NOT NULL,
-    table_id INT NOT NULL
+    table_id_main INT,
+    table_id_vt INT
+
 );
 
 CREATE TABLE field_type ( 

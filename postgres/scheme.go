@@ -81,8 +81,8 @@ func (s *Scheme) loadToDB() error {
 
 		for _, fl := range i.Members {
 			ifl := psql.Insert("field").
-			Columns("field_name,alias,vt,table_id").
-			Values(fl.Name, fl.Alias, false, tId).
+			Columns("field_name,alias,table_id_main").
+			Values(fl.Name, fl.Alias, tId).
 			Suffix("RETURNING \"id\"").
 			RunWith(conn)
 
@@ -123,8 +123,8 @@ func (s *Scheme) loadToDB() error {
 
 			for _, fl := range vt.Members {
 				ifl := psql.Insert("field").
-				Columns("field_name,alias,vt,table_id").
-				Values(fl.Name, fl.Alias, true, vtId).
+				Columns("field_name,alias,table_id_vt").
+				Values(fl.Name, fl.Alias, vtId).
 				Suffix("RETURNING \"id\"").
 				RunWith(conn)
 	

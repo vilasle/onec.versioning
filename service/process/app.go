@@ -88,7 +88,7 @@ func main() {
 		panic("not setting for this table")
 	}
 
-	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s", "192.168.4.230", "sa", "1111", 1433, "pre-prod")
+	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s", "192.168.4.230", "sa", "111", 1433, "pre-prod")
 
 	mconn, err := sql.Open("mssql", connString)
 	if err != nil {
@@ -105,10 +105,26 @@ func main() {
 
 	var scols string
 	for k := range fields {
-		scols += fmt.Sprintf("t1.%s,", k)
+		var exec string
+		switch fields[k] {
+		case fref:
+			exec = refExec(k)
+		case fbool:
+			exec = boolExec(k)
+		case fdate:
+			exec = dateExec(k)
+		case fint:
+			exec = intExec(k)
+		case fstr:
+			exec = stringExec(k)
+		default:
+			panic("unknowing field type")
+		}
+
+		scols += fmt.Sprintf("%s,", exec)
 	}
 
-	scols = scols[:len(scols)-2]
+	scols = scols[:len(scols)-1]
 
 	slms := sq.Select(scols).
 		From(tbNm + " AS t1").
@@ -120,8 +136,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	data := make(map[string]map[string]string)
 	// mrs
-	_, err = readRows(mrows)
+	mrs, err := readRows(mrows)
+
+	if len(mrs) == 0 || len(mrs) > 1 {
+		panic("wrong")
+	}
+
+	data["main"] = mrs[0]
 
 	if err != nil {
 		panic(err)
@@ -192,4 +216,24 @@ func confConnection() pg.PGAuth {
 		SslMode:  false,
 		Dbname:   "onecversion",
 	}
+}
+
+func refExec(fld string) string {
+	return fmt.Sprintf("CONVERT(VARCHAR(34), t1.%s, 2) AS %s", fld, fld)
+}
+
+func boolExec(fld string) string {
+	return fmt.Sprintf("CASE WHEN t1.%s = 0x01 THEN 'true' ELSE 'false' END AS %s", fld, fld)
+}
+
+func dateExec(fld string) string {
+	return fmt.Sprintf("FORMAT(t1.%s, 'dd.MM.yyyy hh:mm:ss', 'ru-RU') as %s", fld, fld)
+}
+
+func stringExec(fld string) string {
+	return fmt.Sprintf("t1.%s AS %s", fld, fld)
+}
+
+func intExec(fld string) string {
+	return fmt.Sprintf("t1.%s AS %s", fld, fld)
 }
