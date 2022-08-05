@@ -1,21 +1,22 @@
 package main
 
 import (
-	// "database/sql"
-	// "fmt"
-	// "log"
-
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
-	_ "github.com/denisenkom/go-mssqldb"
-
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/vilamslep/iokafka"
+	msql "github.com/vilamslep/onec.versioning/mssql"
 	pg "github.com/vilamslep/onec.versioning/postgres"
 )
+
+type Version struct {
+	Main map[string]string
+	VT   map[string][]map[string]string
+}
 
 var (
 	fref  string = "ref"
@@ -25,9 +26,27 @@ var (
 	fint  string = "int"
 )
 
+func getMainFields(tableNumber string, conn *sql.DB) ([]map[string]string, error) {
+
+	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
+	slt := psql.Select("t1.table_name as table, t2.field_name as field, t3.type_name as type").
+		From("metadata_table_main as t1").
+		LeftJoin("field as t2 on t1.id = t2.table_id_main").
+		LeftJoin("field_type as t3 on t2.id = t3.field_id").
+		Where(sq.Eq{"t1.table_number": tableNumber}).
+		RunWith(conn)
+
+	if rows, err := slt.Query(); err == nil {
+		return readRows(rows)
+	} else {
+		return nil, err
+	}
+}
+
 func main() {
 
-	// config := iokafka.KafkaConfig{
+	/*// config := iokafka.KafkaConfig{
 	// 	Brokers: []string{"172.19.1.3:9092"},
 	// 	Topic:   "raw",
 	// 	GroupID: "processing",
@@ -41,7 +60,7 @@ func main() {
 
 	// 	fmt.Println(msg)
 
-	// }
+	// }*/
 
 	s := `{"#",7433d4e8-f07d-4ace-819f-00191a4913db,431:b3c1a4bf015829f711ed05ebb7aaf42c}`
 
@@ -62,42 +81,19 @@ func main() {
 	pos := strings.Split(ns, ":")
 	tnum, ref := pos[0], pos[1]
 
-	psql := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-
-	slt := psql.Select("t1.table_name as table, t2.field_name as field, t3.type_name as type").
-		From("metadata_table_main as t1").
-		LeftJoin("field as t2 on t1.id = t2.table_id").
-		LeftJoin("field_type as t3 on t2.id = t3.field_id").
-		Where(sq.Eq{"t1.table_number": tnum}).
-		Where(sq.Eq{"t2.vt": false}).
-		RunWith(conn)
-
-	rows, err := slt.Query()
-
-	if err != nil {
-		panic(err)
-	}
-
-	rs, err := readRows(rows)
-
-	if err != nil {
-		panic(err)
-	}
-
-	if len(rs) == 0 {
-		panic("not setting for this table")
-	}
-
-	connString := fmt.Sprintf("server=%s;user id=%s;password=%s;port=%d;database=%s", "192.168.4.230", "sa", "111", 1433, "pre-prod")
-
-	mconn, err := sql.Open("mssql", connString)
+	mconn, err := msql.NewConnection(msql.MSSQLAuth{})
 	if err != nil {
 		panic(err)
 	}
 	defer mconn.Close()
 
+	rs, err := getMainFields(tnum, conn)
+	if err != nil {
+		panic(err)
+	}
 	fields := make(map[string]string)
-	tbNm := "dbo." + rs[0]["table"]
+	maintb := rs[0]["table"]
+	tbNm := "dbo." + maintb
 
 	for _, fl := range rs {
 		fields[fl["field"]] = fl["type"]
@@ -137,7 +133,6 @@ func main() {
 		panic(err)
 	}
 
-	data := make(map[string]map[string]string)
 	// mrs
 	mrs, err := readRows(mrows)
 
@@ -145,8 +140,97 @@ func main() {
 		panic("wrong")
 	}
 
-	data["main"] = mrs[0]
+	version := Version{
+		Main: mrs[0],
+		VT:   make(map[string][]map[string]string),
+	}
 
+	vtlt := psql.Select("t1.table_name as table, t2.field_name as field, t3.type_name as type").
+		From("metadata_table_vt as t1").
+		LeftJoin("field as t2 on t1.id = t2.table_id_vt").
+		LeftJoin("field_type as t3 on t2.id = t3.field_id").
+		Where(sq.Eq{"t1.table_number": tnum}).
+		RunWith(conn)
+
+	vtrows, err := vtlt.Query()
+
+	if err != nil {
+		panic(err)
+	}
+
+	vtrs, err := readRows(vtrows)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if len(rs) == 0 {
+		panic("not setting for this table")
+	}
+
+	childTabs := make(map[string]map[string]string)
+	for _, vti := range vtrs {
+		table := vti["table"]
+		fld := vti["field"]
+		tfld := vti["type"]
+		if _, ok := childTabs[table]; !ok {
+			childTabs[table] = make(map[string]string, 0)
+		}
+		childTabs[vti["table"]][fld] = tfld
+	}
+
+	for k, v := range childTabs {
+		fields := make(map[string]string)
+		tbNm := "dbo." + k
+
+		for flk, flv := range v {
+			fields[flk] = flv
+		}
+
+		var scols string
+		for k := range fields {
+			var exec string
+			switch fields[k] {
+			case fref:
+				exec = refExec(k)
+			case fbool:
+				exec = boolExec(k)
+			case fdate:
+				exec = dateExec(k)
+			case fint:
+				exec = intExec(k)
+			case fstr:
+				exec = stringExec(k)
+			default:
+				panic("unknowing field type")
+			}
+
+			scols += fmt.Sprintf("%s,", exec)
+		}
+
+		scols = scols[:len(scols)-1]
+
+		slms := sq.Select(scols).
+			From(tbNm + " AS t1").
+			Where(sq.Eq{fmt.Sprintf("CONVERT(VARCHAR(34), t1.%s_IDRRef, 2)", maintb): ref}).
+			RunWith(mconn)
+
+		mrows, err = slms.Query()
+
+		if err != nil {
+			panic(err)
+		}
+
+		// mrs
+		mrs, err = readRows(mrows)
+
+		version.VT[k] = make([]map[string]string, 0, len(mrs))
+		for _, it := range mrs {
+			version.VT[k] = append(version.VT[k], it)
+		}
+	}
+
+	_, err = json.Marshal(version)
 	if err != nil {
 		panic(err)
 	}
