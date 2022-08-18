@@ -60,9 +60,8 @@ CREATE TABLE IF NOT EXISTS version_431 (
     ref VARCHAR(32) NOT NULL, 
     keywords TEXT, 
     content TEXT NOT NULL,
-    version_ref_id INT NOT NULL, 
-    FOREIGN KEY (version_ref_id) REFERENCES version_ref(id)
-)
+    version_number INT NOT NULL
+);
 
 
 SELECT t1.table_name as name,t2.id as id, t3.id as ref_id, t3.table_name as ver_with_table
@@ -90,3 +89,12 @@ from metadata_table_main as t1
 left join field as t2 on t1.id = t2.table_id
 left join field_type as t3 on t2.id = t3.field_id
 where t1.table_number = 431 and t2.vt = 'f';
+
+
+insert into version_ref (metadata_id, table_name)
+select * from ( select t2.id as metadata_id, 'version_431' as table_name
+    from metadata_table_main as t1
+    left join metadata as t2 on t1.metadata_id = t2.id
+    where t1.table_number = 431
+) as tmp 
+where not exists (select table_name from version_ref where table_name = 'version_431' limit 1);

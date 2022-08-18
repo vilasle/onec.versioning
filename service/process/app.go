@@ -16,41 +16,6 @@ import (
 
 const DEBUG = true
 
-type Version struct {
-	Main map[string]string
-	VT   map[string][]map[string]string
-}
-
-func (v Version) Write(tabNum string, pgconn *sql.DB) error {
-	// content, err := json.Marshal(v)
-	// if err != nil {
-	// 	return err
-	// }
-	q := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS version_%s ( 
-		id serial PRIMARY KEY, 
-		ref VARCHAR(32) NOT NULL, 
-		keywords TEXT, 
-		content TEXT NOT NULL,
-		version_ref_id INT NOT NULL
-	);`, tabNum)
-	if _, err := pgconn.Exec(q); err != nil {
-		return err
-	} else {
-		addRowToVersionsRef()
-	}
-
-	//get last by ref and create new number version and insert to table
-
-}
-func createTable(name string, pgconn *sql.DB) error {
-
-	q := `
-	`
-	pgconn.Exec()
-
-}
-
 type FakeTree map[string]map[string]string
 
 func getFields(tableNumber string, conn *sql.DB, wantChild bool) (db.Result, error) {
@@ -118,14 +83,13 @@ func main() {
 	}
 
 	//connection with PostgreSQL and MSSQL
-	pgconn, msconn, err = CreateConnections()
-	if err != nil {
+	if pgconn, msconn, err = CreateConnections(); err != nil {
 		panic(err)
 	}
 	defer msconn.Close()
 	defer pgconn.Close()
 
-	//head fields setting
+	//setting of head fields
 	rs, err := getFields(tnum, pgconn, false)
 	if err != nil {
 		panic(err)
@@ -142,7 +106,7 @@ func main() {
 	} else {
 		panic(err)
 	}
-	//value tables fields setting
+	//setting of value tables fields
 	vtrs, err := getFields(tnum, pgconn, true)
 
 	childTabs := transformResultToFakeTree(vtrs)
@@ -158,11 +122,10 @@ func main() {
 			panic(err)
 		}
 	}
-
-	if err := version.Write(c); err != nil {
+	//saving version in database
+	if err := version.Write(tnum, ref, pgconn); err != nil {
 		panic(err)
 	}
-
 }
 
 func transformResultToFakeTree(vtrs db.Result) FakeTree {

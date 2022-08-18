@@ -45,3 +45,6 @@ func createDBConnection(gettingConf func() (db.ConfigConnection, error)) (*sql.D
 	}
 	return conf.NewConnection()
 }
+
+
+
