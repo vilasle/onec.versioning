@@ -55,14 +55,14 @@ CREATE TABLE version_ref (
 --     FOREIGN KEY (version__ref_id) REFERENCES version__ref(version__ref_id)
 -- )
 
--- CREATE TABLE version_431 ( 
---     id serial PRIMARY KEY, 
---     ref VARCHAR(32) NOT NULL, 
---     keywords TEXT, 
---     content TEXT NOT NULL,
---     version_ref_id INT NOT NULL, 
---     FOREIGN KEY (version_ref_id) REFERENCES version_ref(id)
--- )
+CREATE TABLE IF NOT EXISTS version_431 ( 
+    id serial PRIMARY KEY, 
+    ref VARCHAR(32) NOT NULL, 
+    keywords TEXT, 
+    content TEXT NOT NULL,
+    version_ref_id INT NOT NULL, 
+    FOREIGN KEY (version_ref_id) REFERENCES version_ref(id)
+)
 
 
 SELECT t1.table_name as name,t2.id as id, t3.id as ref_id, t3.table_name as ver_with_table

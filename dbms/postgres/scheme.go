@@ -10,6 +10,7 @@ import (
 	"regexp"
 
 	sq "github.com/Masterminds/squirrel"
+	db "github.com/vilamslep/onec.versioning/dbms"
 )
 
 type Scheme []Metadata
@@ -41,11 +42,11 @@ type Type struct {
 }
 
 //TODO need to refactory this func, I don't like how it looks
-func (s *Scheme) loadToDB() error {
+func (s *Scheme) loadToDB(config db.ConfigConnection) error {
 
 	var mtId, tId, flId, tpId, vtId string
 
-	conn, err := NewConnection(confConnection())
+	conn, err := db.NewConnection(config)
 	if err != nil {
 		return err
 	}
@@ -68,34 +69,34 @@ func (s *Scheme) loadToDB() error {
 		if tnum == "" {
 			return fmt.Errorf("can't to get table number")
 		}
-		
+
 		imt := psql.Insert("metadata_table_main").
 			Columns("table_name,table_number,metadata_id").
-			Values(i.TableName, tnum, mtId ).
+			Values(i.TableName, tnum, mtId).
 			Suffix("RETURNING \"id\"").
 			RunWith(conn)
-		
+
 		if err := imt.QueryRow().Scan(&tId); err != nil {
 			return err
 		}
 
 		for _, fl := range i.Members {
 			ifl := psql.Insert("field").
-			Columns("field_name,alias,table_id_main").
-			Values(fl.Name, fl.Alias, tId).
-			Suffix("RETURNING \"id\"").
-			RunWith(conn)
+				Columns("field_name,alias,table_id_main").
+				Values(fl.Name, fl.Alias, tId).
+				Suffix("RETURNING \"id\"").
+				RunWith(conn)
 
 			if err := ifl.QueryRow().Scan(&flId); err != nil {
 				return err
 			}
-			
+
 			for _, t := range fl.Types {
 				it := psql.Insert("field_type").
-				Columns("type_name,is_simple,table_name,field_id").
-				Values(t.Name, t.IsSimple, t.TableName, flId).
-				Suffix("RETURNING \"id\"").
-				RunWith(conn)
+					Columns("type_name,is_simple,table_name,field_id").
+					Values(t.Name, t.IsSimple, t.TableName, flId).
+					Suffix("RETURNING \"id\"").
+					RunWith(conn)
 				// tpId is useless var. Call Scan is nessasary for getting error
 				if err := it.QueryRow().Scan(&tpId); err != nil {
 					return err
@@ -104,18 +105,17 @@ func (s *Scheme) loadToDB() error {
 		}
 
 		for _, vt := range i.VT {
-		
+
 			vtnum := saveOnlyNumbers(vt.Table)
 			if vtnum == "" {
 				return fmt.Errorf("can't to get table number")
 			}
-			
-			
+
 			ivt := psql.Insert("metadata_table_vt").
-			Columns("table_name,table_number,metadata_table_main_id").
-			Values(vt.Table,vtnum, tId).
-			Suffix("RETURNING \"id\"").
-			RunWith(conn)
+				Columns("table_name,table_number,metadata_table_main_id").
+				Values(vt.Table, vtnum, tId).
+				Suffix("RETURNING \"id\"").
+				RunWith(conn)
 
 			if err := ivt.QueryRow().Scan(&vtId); err != nil {
 				return err
@@ -123,21 +123,21 @@ func (s *Scheme) loadToDB() error {
 
 			for _, fl := range vt.Members {
 				ifl := psql.Insert("field").
-				Columns("field_name,alias,table_id_vt").
-				Values(fl.Name, fl.Alias, vtId).
-				Suffix("RETURNING \"id\"").
-				RunWith(conn)
-	
+					Columns("field_name,alias,table_id_vt").
+					Values(fl.Name, fl.Alias, vtId).
+					Suffix("RETURNING \"id\"").
+					RunWith(conn)
+
 				if err := ifl.QueryRow().Scan(&flId); err != nil {
 					return err
 				}
-				
+
 				for _, t := range fl.Types {
 					it := psql.Insert("field_type").
-					Columns("type_name,is_simple,table_name,field_id").
-					Values(t.Name, t.IsSimple, t.TableName, flId).
-					Suffix("RETURNING \"id\"").
-					RunWith(conn)
+						Columns("type_name,is_simple,table_name,field_id").
+						Values(t.Name, t.IsSimple, t.TableName, flId).
+						Suffix("RETURNING \"id\"").
+						RunWith(conn)
 					// tpId is useless var. Call Scan is nessasary for getting error
 					if err := it.QueryRow().Scan(&tpId); err != nil {
 						return err
@@ -164,14 +164,14 @@ func cleanTables(conn *sql.DB, tbls []string) error {
 	return nil
 }
 
-func LoadScheme(fd *os.File) error {
+func LoadScheme(fd *os.File, config db.ConfigConnection) error {
 
 	sch, err := fromJson(fd)
 	if err != nil {
 		return err
 	}
 
-	if err := sch.loadToDB(); err != nil {
+	if err := sch.loadToDB(config); err != nil {
 		return err
 	}
 
@@ -197,15 +197,4 @@ func fromJson(r io.Reader) (sch *Scheme, err error) {
 		return nil, err
 	}
 	return
-}
-
-func confConnection() PGAuth {
-	return PGAuth{
-		User:     "onecversion",
-		Password: "onecversion",
-		Host:     "172.19.2.2",
-		Port:     5432,
-		SslMode:  false,
-		Dbname:   "onecversion",
-	}
 }
