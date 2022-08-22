@@ -13,8 +13,8 @@ type PGActions struct {
 
 func (act *PGActions) createTable() error {
 	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		id serial PRIMARY KEY, ref VARCHAR(32) NOT NULL, keywords TEXT, 
-		content TEXT NOT NULL, version_timestamp TIMESTAMP NOT NULL, version_number INT NOT NULL);`, act.tableName)
+		id serial PRIMARY KEY, ref VARCHAR(32) NOT NULL, keywords TEXT,content TEXT NOT NULL, 
+		user_id VARCHAR(36) NOT NULL, version_timestamp TIMESTAMP NOT NULL, version_number INT NOT NULL);`, act.tableName)
 
 	_, err := act.conn.Exec(q)
 	return err
@@ -53,10 +53,10 @@ func (act *PGActions) getLastIdByRef(ref string) (int, error) {
 	}
 }
 
-func (act *PGActions) addNewVersion(ref string, content string, lastId int, timestamp time.Time) error {
-	q := fmt.Sprintf(`INSERT INTO %s (ref, content, version_number, version_timestamp) VALUES($1, $2, $3, $4);`, act.tableName)
+func (act *PGActions) addNewVersion(ref string, content string, lastId int, timestamp time.Time, user string) error {
+	q := fmt.Sprintf(`INSERT INTO %s (ref, content, version_number, version_timestamp, user_id) VALUES($1, $2, $3, $4, $5);`, act.tableName)
 
-	_, err := act.conn.Exec(q, ref, string(content), (lastId + 1), timestamp)
+	_, err := act.conn.Exec(q, ref, string(content), (lastId + 1), timestamp, user)
 
 	return err
 }

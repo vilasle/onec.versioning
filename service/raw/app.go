@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,6 +34,7 @@ func getKafkaWrite() *iokafka.Writer {
 }
 
 func main() {
+	dbg_LoadEnv()
 
 	logger.Info("Start web service")
 
@@ -91,4 +93,21 @@ func HandlerRawProducer(wrt *iokafka.Writer) Handler {
 		}
 		return nil
 	}
+}
+
+func dbg_LoadEnv() error {
+	f, err := os.Open("dev.env")
+	if err != nil {
+		return err
+	}
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		path := strings.Split(sc.Text(), "=")
+		if len(path) < 2 {
+			continue
+		}
+		os.Setenv(path[0], path[1])
+	}
+	return sc.Err()
 }

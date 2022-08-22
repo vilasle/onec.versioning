@@ -6,19 +6,24 @@ import (
 	"time"
 )
 
-type Version struct {
+type VersionRecord struct {
+	User string
 	Date time.Time
+	Version
+}
+
+type Version struct {
 	Main map[string]string              `json:"Main"`
 	VT   map[string][]map[string]string `json:"VT"`
 }
 
-func (v Version) Write(tabNum string, ref string, pgconn *sql.DB) error {
+func (v VersionRecord) Write(tabNum string, ref string, pgconn *sql.DB) error {
 	content, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 
-	act := PGActions{conn: pgconn, tableName: "version_" + tabNum }
+	act := PGActions{conn: pgconn, tableName: "version_" + tabNum}
 
 	if err := act.createTable(); err == nil {
 		err := act.addRowToVersionsRef()
@@ -33,5 +38,5 @@ func (v Version) Write(tabNum string, ref string, pgconn *sql.DB) error {
 		return err
 	}
 
-	return act.addNewVersion(ref, string(content), lastId, v.Date)
+	return act.addNewVersion(ref, string(content), lastId, v.Date, v.User)
 }

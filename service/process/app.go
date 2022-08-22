@@ -70,15 +70,14 @@ func main() {
 
 	for scanner.Scan() {
 		msg := scanner.Message()
-		content := msg.Value
-		if err := handleMessage(content); err != nil {
+		if err := handleMessage(msg.Value, msg.Key); err != nil {
 			log.Println(err)
 		}
 	}
 
 }
 
-func handleMessage(content []byte) error {
+func handleMessage(content []byte, user []byte) error {
 	var (
 		tnum, ref string
 		err       error
@@ -125,8 +124,13 @@ func handleMessage(content []byte) error {
 		}
 	}
 	//saving version in database
-	version.Date = time.Now()
-	if err := version.Write(tnum, ref, pgconn); err != nil {
+
+	record := VersionRecord{
+		User:  string(user),
+		Date: time.Now(),
+		Version: version,
+	}
+	if err := record.Write(tnum, ref, pgconn); err != nil {
 		return err
 	}
 	return err
