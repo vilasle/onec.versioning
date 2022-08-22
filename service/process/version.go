@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"time"
 )
 
 type Version struct {
+	Date time.Time
 	Main map[string]string              `json:"Main"`
 	VT   map[string][]map[string]string `json:"VT"`
 }
@@ -31,5 +33,5 @@ func (v Version) Write(tabNum string, ref string, pgconn *sql.DB) error {
 		return err
 	}
 
-	return act.addNewVersion(ref, string(content), lastId)
+	return act.addNewVersion(ref, string(content), lastId, v.Date)
 }

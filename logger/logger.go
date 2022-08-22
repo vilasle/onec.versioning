@@ -1,98 +1,100 @@
 package logger
 
-import(
+import (
+	"os"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var errorLogger *zap.SugaredLogger
-
-var levelMap = map[string]zapcore.Level{
-	"debug": zapcore.DebugLevel,
-	"info": zapcore.InfoLevel,
-	"warn": zapcore.WarnLevel,
-	"error": zapcore.ErrorLevel,
-	"dpanic": zapcore.DPanicLevel,
-	"panic": zapcore.PanicLevel,
-	"fatal": zapcore.FatalLevel,
-}
-
-func getLoggerLevel(lvl string) zapcore.Level {
-	if level, ok := levelMap[lvl]; ok {
-		return level
-	} 
-	return zapcore.InfoLevel
-}
+var logger *zap.SugaredLogger
 
 func init() {
-	fileName := "zap.log"
-	level := getLoggerLevel("debug")
-	syncWriter := zapcore.AddSync(&lumberjack.Logger{
-		Filename: fileName,
-		MaxSize: 1 << 30,
-		LocalTime: true,
-		Compress: true,
+	// info level enabler
+	infoLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+		return level == zapcore.InfoLevel
 	})
-	encoder := zap.NewProductionEncoderConfig()
-	encoder.EncodeTime = zapcore.ISO8601TimeEncoder
-	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoder), syncWriter, zap.NewAtomicLevelAt(level))
-	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
-	errorLogger = logger.Sugar() 
+
+	// error and fatal level enabler
+	errorFatalLevel := zap.LevelEnablerFunc(func(level zapcore.Level) bool {
+		return level == zapcore.ErrorLevel || level == zapcore.FatalLevel
+	})
+
+	// write syncers
+	stdoutSyncer := zapcore.Lock(os.Stdout)
+	stderrSyncer := zapcore.Lock(os.Stderr)
+
+	// tee core
+	core := zapcore.NewTee(
+		zapcore.NewCore(
+			zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+			stdoutSyncer,
+			infoLevel,
+		),
+		zapcore.NewCore(
+			zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
+			stderrSyncer,
+			errorFatalLevel,
+		),
+	)
+
+	// finally construct the logger with the tee core
+	logger = zap.New(core).Sugar()
+
 }
 
 func Debug(args ...interface{}) {
-	errorLogger.Debug(args...)
+	logger.Debug(args...)
 }
- 
+
 func Debugf(template string, args ...interface{}) {
-	errorLogger.Debugf(template, args...)
+	logger.Debugf(template, args...)
 }
- 
+
 func Info(args ...interface{}) {
-	errorLogger.Info(args...)
+	logger.Info(args...)
 }
- 
+
 func Infof(template string, args ...interface{}) {
-	errorLogger.Infof(template, args...)
+	logger.Infof(template, args...)
 }
- 
+
 func Warn(args ...interface{}) {
-	errorLogger.Warn(args...)
+	logger.Warn(args...)
 }
- 
+
 func Warnf(template string, args ...interface{}) {
-	errorLogger.Warnf(template, args...)
+	logger.Warnf(template, args...)
 }
- 
+
 func Error(args ...interface{}) {
-	errorLogger.Error(args...)
+	logger.Error(args...)
 }
- 
+
 func Errorf(template string, args ...interface{}) {
-	errorLogger.Errorf(template, args...)
+	logger.Errorf(template, args...)
 }
- 
+
 func DPanic(args ...interface{}) {
-	errorLogger.DPanic(args...)
+	logger.DPanic(args...)
 }
- 
+
 func DPanicf(template string, args ...interface{}) {
-	errorLogger.DPanicf(template, args...)
+	logger.DPanicf(template, args...)
 }
- 
+
 func Panic(args ...interface{}) {
-	errorLogger.Panic(args...)
+	logger.Panic(args...)
 }
- 
+
 func Panicf(template string, args ...interface{}) {
-	errorLogger.Panicf(template, args...)
+	logger.Panicf(template, args...)
 }
- 
+
 func Fatal(args ...interface{}) {
-	errorLogger.Fatal(args...)
+	logger.Fatal(args...)
 }
- 
+
 func Fatalf(template string, args ...interface{}) {
-	errorLogger.Fatalf(template, args...)
+	logger.Fatalf(template, args...)
 }

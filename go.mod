@@ -8,13 +8,11 @@ require (
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/lib/pq v1.10.6
 	github.com/pkg/errors v0.9.1
-	github.com/vilamslep/iokafka v0.0.0-20220726065240-523afbfa7a70
+	github.com/vilamslep/iokafka v0.0.0-20220819092315-203cb791d201
 	go.uber.org/zap v1.21.0
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
 require (
-	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/klauspost/compress v1.14.2 // indirect

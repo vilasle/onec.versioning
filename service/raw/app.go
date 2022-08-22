@@ -1,36 +1,52 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/vilamslep/iokafka"
+	"github.com/vilamslep/onec.versioning/logger"
 )
 
 type Handler func(w http.ResponseWriter, r *http.Request) error
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := h(w, r); err != nil {
+		logger.Errorf("Error on handling ", err)
 		w.WriteHeader(503)
 		w.Write([]byte(err.Error()))
 	}
 }
 
+func getKafkaWrite() *iokafka.Writer {
+	host := os.Getenv("KAFKAHOST")
+	port := os.Getenv("KAFKAPORT")
+	topic := os.Getenv("KAFKATOPIC")
+
+	return iokafka.NewWriter(fmt.Sprintf("%s:%s", host, port), topic)
+}
+
 func main() {
 
-	wrt := iokafka.NewWriter("172.19.1.3:9092", "raw")
+	logger.Info("Start web service")
+
+	wrt := getKafkaWrite()
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 
-	r.Method("POST", "/raw", HandlerRawProducer(wrt))
+	resourse := os.Getenv("RAWRESOURSE")
+	port := os.Getenv("RAWPORT")
+	r.Method("POST", "/"+resourse, HandlerRawProducer(wrt))
 
-	http.ListenAndServe(":3000", r)
+	http.ListenAndServe(":"+port, r)
 }
 
 func HandlerRawProducer(wrt *iokafka.Writer) Handler {

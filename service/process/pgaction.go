@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type PGActions struct {
@@ -13,7 +14,7 @@ type PGActions struct {
 func (act *PGActions) createTable() error {
 	q := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 		id serial PRIMARY KEY, ref VARCHAR(32) NOT NULL, keywords TEXT, 
-		content TEXT NOT NULL, version_number INT NOT NULL);`, act.tableName)
+		content TEXT NOT NULL, version_timestamp TIMESTAMP NOT NULL, version_number INT NOT NULL);`, act.tableName)
 
 	_, err := act.conn.Exec(q)
 	return err
@@ -52,10 +53,10 @@ func (act *PGActions) getLastIdByRef(ref string) (int, error) {
 	}
 }
 
-func (act *PGActions) addNewVersion(ref string, content string, lastId int) error {
-	q := fmt.Sprintf(`INSERT INTO %s (ref, content, version_number) VALUES($1, $2, $3);`, act.tableName)
+func (act *PGActions) addNewVersion(ref string, content string, lastId int, timestamp time.Time) error {
+	q := fmt.Sprintf(`INSERT INTO %s (ref, content, version_number, version_timestamp) VALUES($1, $2, $3, $4);`, act.tableName)
 
-	_, err := act.conn.Exec(q, ref, string(content), (lastId + 1))
+	_, err := act.conn.Exec(q, ref, string(content), (lastId + 1), timestamp)
 
 	return err
 }

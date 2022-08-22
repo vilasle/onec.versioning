@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strings"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	_ "github.com/vilamslep/iokafka"
+	"github.com/vilamslep/iokafka"
 	db "github.com/vilamslep/onec.versioning/dbms"
 	mssql "github.com/vilamslep/onec.versioning/dbms/mssql"
 	"github.com/vilamslep/onec.versioning/raw"
@@ -17,6 +19,9 @@ import (
 const DEBUG = true
 
 type FakeTree map[string]map[string]string
+
+var pgconn *sql.DB
+var msconn *sql.DB
 
 func getFields(tableNumber string, conn *sql.DB, wantChild bool) (db.Result, error) {
 
@@ -46,48 +51,45 @@ func getFields(tableNumber string, conn *sql.DB, wantChild bool) (db.Result, err
 	}
 }
 
-/*// config := iokafka.KafkaConfig{
-// 	Brokers: []string{"172.19.1.3:9092"},
-// 	Topic:   "raw",
-// 	GroupID: "processing",
-// 	AttemtsOnFail: 5,
-// }
-// rd := iokafka.NewScanner(config)
-
-// for rd.Scan() {
-
-// 	msg := rd.Message()
-
-// 	fmt.Println(msg)
-
-// }*/
-
 func main() {
-
-	var (
-		pgconn, msconn *sql.DB
-		tnum, ref      string
-		err            error
-		version        = Version{VT: make(map[string][]map[string]string)}
-	)
 
 	if DEBUG {
 		dbg_LoadEnv()
 	}
 
-	rawstr := `{"#",7433d4e8-f07d-4ace-819f-00191a4913db,431:b3c1a4bf015829f711ed05ebb7aaf42c}`
+	//connection with PostgreSQL and MSSQL
+	var err error
+	if pgconn, msconn, err = CreateConnections(); err != nil {
+		log.Fatalln(err)
+	}
 
+	defer msconn.Close()
+	defer pgconn.Close()
+
+	scanner := iokafka.NewScanner(loadKafkaConfigFromEnv(0))
+
+	for scanner.Scan() {
+		msg := scanner.Message()
+		content := msg.Value
+		if err := handleMessage(content); err != nil {
+			log.Println(err)
+		}
+	}
+
+}
+
+func handleMessage(content []byte) error {
+	var (
+		tnum, ref string
+		err       error
+		version   = Version{VT: make(map[string][]map[string]string)}
+	)
+
+	rawstr := string(content)
 	// expected raw has to be like {"#",7433d4e8-f07d-4ace-819f-00191a4913db,431:b3c1a4bf015829f711ed05ebb7aaf42c}
 	if predata, ok := raw.CheckRawData(rawstr); ok {
 		tnum, ref = raw.GetMainColumsAsVars(predata)
 	}
-
-	//connection with PostgreSQL and MSSQL
-	if pgconn, msconn, err = CreateConnections(); err != nil {
-		panic(err)
-	}
-	defer msconn.Close()
-	defer pgconn.Close()
 
 	//setting of head fields
 	rs, err := getFields(tnum, pgconn, false)
@@ -96,7 +98,7 @@ func main() {
 	}
 
 	if rs.Empty() {
-		panic("Not found main table settings")
+		return fmt.Errorf("Not found main table settings")
 	}
 	it, _ := rs.First()
 	maintb := it["table"]
@@ -104,7 +106,7 @@ func main() {
 	if data, err := getHeadOfVersion(rs, ref, msconn); err == nil {
 		version.Main = data
 	} else {
-		panic(err)
+		return err
 	}
 	//setting of value tables fields
 	vtrs, err := getFields(tnum, pgconn, true)
@@ -119,13 +121,15 @@ func main() {
 				version.VT[k] = append(version.VT[k], it)
 			}
 		} else {
-			panic(err)
+			return err
 		}
 	}
 	//saving version in database
+	version.Date = time.Now()
 	if err := version.Write(tnum, ref, pgconn); err != nil {
-		panic(err)
+		return err
 	}
+	return err
 }
 
 func transformResultToFakeTree(vtrs db.Result) FakeTree {
@@ -215,7 +219,25 @@ func getVTOfVersion(key string, value map[string]string,
 	}
 
 	return db.ReadRows(mrows)
+}
 
+func loadKafkaConfigFromEnv(offset int64) iokafka.ScannerConfig {
+
+	host := os.Getenv("KAFKAHOST")
+	port := os.Getenv("KAFKAPORT")
+	topic := os.Getenv("KAFKATOPIC")
+	group := os.Getenv("KAFKAGROUP")
+
+	soc := fmt.Sprintf("%s:%s", host, port)
+
+	return iokafka.ScannerConfig{
+		Brokers:       []string{soc},
+		Topic:         topic,
+		GroupID:       group,
+		AttemtsOnFail: 5,
+		FailTimeout:   10,
+		StartOffset:   offset,
+	}
 }
 
 func dbg_LoadEnv() error {
