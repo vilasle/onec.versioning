@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"database/sql"
@@ -11,17 +11,12 @@ import (
 
 var mainErr error = errors.New("can not create connections with databases")
 
-func CreateConnections() (*sql.DB, *sql.DB, error) {
-	var (
-		err         error
-		areThereErr bool
-	)
+func CreateConnections() (pgconn *sql.DB, msconn *sql.DB, err error) {
 
 	pgconn, pgerr := createDBConnection(pg.GetConfigFromEnv)
-
 	msconn, mserr := createDBConnection(mssql.GetConfigFromEnv)
 
-	areThereErr = pgerr != nil || mserr != nil
+	areThereErr := pgerr != nil || mserr != nil
 
 	if areThereErr {
 		err = mainErr
@@ -35,7 +30,7 @@ func CreateConnections() (*sql.DB, *sql.DB, error) {
 		}
 	}
 
-	return pgconn, msconn, err
+	return
 }
 
 func createDBConnection(gettingConf func() (db.ConfigConnection, error)) (*sql.DB, error) {
@@ -45,6 +40,3 @@ func createDBConnection(gettingConf func() (db.ConfigConnection, error)) (*sql.D
 	}
 	return conf.NewConnection()
 }
-
-
-

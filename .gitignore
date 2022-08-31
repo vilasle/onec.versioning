@@ -18,4 +18,5 @@
 base.json
 table.json
 tables.json
+enum.json
 *.env

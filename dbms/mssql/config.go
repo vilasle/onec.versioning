@@ -24,10 +24,9 @@ func (c Config) Driver() string {
 	return "mssql"
 }
 
-func (c Config) NewConnection()(*sql.DB, error) {
+func (c Config) NewConnection() (*sql.DB, error) {
 	return db.NewConnection(c)
-} 
-
+}
 
 func GetConfigFromEnv() (db.ConfigConnection, error) {
 	config := Config{}

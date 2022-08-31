@@ -44,57 +44,49 @@ CREATE TABLE version_ref (
     FOREIGN KEY (metadata_id) REFERENCES metadata(id)
 );
 
--- CREATE TABLE version_{entity_id} ( 
---     version_id serial PRIMARY KEY, 
---     version__ref_id INT NOT NULL, 
---     tags TEXT, 
---     keywords TEXT, 
---     version_num INT NOT NULL, 
---     object_id VARCHAR(16), 
---     content TEXT, 
---     FOREIGN KEY (version__ref_id) REFERENCES version__ref(version__ref_id)
--- )
-
-CREATE TABLE IF NOT EXISTS version_431 ( 
+CREATE TABLE enums ( 
     id serial PRIMARY KEY, 
-    ref VARCHAR(32) NOT NULL, 
-    keywords TEXT, 
-    content TEXT NOT NULL,
-    version_number INT NOT NULL
+    enum_name VARCHAR(150) 
 );
 
+CREATE TABLE enums_value ( 
+    id serial PRIMARY KEY, 
+    alias VARCHAR(150),
+    order_enum INT NOT NULL,
+    enum_id INT NOT NULL,
+    FOREIGN KEY (enum_id) REFERENCES enums(id)
+);
 
-SELECT t1.table_name as name,t2.id as id, t3.id as ref_id, t3.table_name as ver_with_table
-FROM metadata_table_main as t1
-    LEFT JOIN metadata as t2 ON t1.metadata_id = t2.id
-    LEFT JOIN version_ref as t3 ON t2.id = t3.metadata_id
-WHERE
-    t1.table_number = 431;
-
-SELECT 
-    t1.table_name as name,
-    t2.id as id, 
-    t3.id as ref_id, 
-    t3.table_name as ver_with_table 
-FROM metadata_table_main 
-    LEFT JOIN metadata as t2 
-        ON t1.metadata_id = t2.id 
-    LEFT JOIN version_ref as t3 
-    ON t2.id = t3.metadata_id 
-WHERE t1.table_number = $1
+-- CREATE TABLE IF NOT EXISTS version_431 ( 
+--     id serial PRIMARY KEY, 
+--     ref VARCHAR(32) NOT NULL, 
+--     keywords TEXT, 
+--     content TEXT NOT NULL,
+--     version_number INT NOT NULL
+-- );
 
 
-select t1.table_name as table, t2.field_name as field, t3
-from metadata_table_main as t1
-left join field as t2 on t1.id = t2.table_id
-left join field_type as t3 on t2.id = t3.field_id
-where t1.table_number = 431 and t2.vt = 'f';
-
-
-insert into version_ref (metadata_id, table_name)
-select * from ( select t2.id as metadata_id, 'version_431' as table_name
-    from metadata_table_main as t1
-    left join metadata as t2 on t1.metadata_id = t2.id
-    where t1.table_number = 431
-) as tmp 
-where not exists (select table_name from version_ref where table_name = 'version_431' limit 1);
+-- SELECT t2.alias
+-- FROM metadata_table_main as t1 
+-- LEFT JOIN metadata as t2 
+--     ON t1.metadata_id = t2.id
+-- WHERE t1.table_number = 431;
+-- SELECT 
+--     t1.table_name AS main_table, 
+--     t1.metadata_id AS metadata,  
+--     t2.field_name AS field, 
+--     t2.alias AS alias, 
+--     t3.type_name AS type_name, 
+--     t3.table_name AS field_table,
+--     t5.alias AS field_object_alias 
+-- FROM metadata_table_main AS t1 
+--     LEFT JOIN field AS t2 
+--         ON t1.id = t2.table_id_main 
+--     LEFT JOIN field_type AS t3 
+--         ON t2.id = t3.field_id
+--     LEFT JOIN metadata_table_main AS t4
+--         ON t3.table_name = t4.table_name
+--     LEFT JOIN metadata as t5 
+--         ON t4.metadata_id = t5.id 
+-- WHERE 
+--     t1.table_number = 431;

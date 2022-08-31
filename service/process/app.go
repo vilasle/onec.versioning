@@ -13,6 +13,8 @@ import (
 	"github.com/vilamslep/iokafka"
 	db "github.com/vilamslep/onec.versioning/dbms"
 	mssql "github.com/vilamslep/onec.versioning/dbms/mssql"
+	ent "github.com/vilamslep/onec.versioning/entity"
+	"github.com/vilamslep/onec.versioning/lib"
 	"github.com/vilamslep/onec.versioning/raw"
 )
 
@@ -45,6 +47,7 @@ func getFields(tableNumber string, conn *sql.DB, wantChild bool) (db.Result, err
 		RunWith(conn)
 
 	if rows, err := slt.Query(); err == nil {
+		defer rows.Close()
 		return db.ReadRows(rows)
 	} else {
 		return nil, err
@@ -59,21 +62,29 @@ func main() {
 
 	//connection with PostgreSQL and MSSQL
 	var err error
-	if pgconn, msconn, err = CreateConnections(); err != nil {
+	if pgconn, msconn, err = lib.CreateConnections(); err != nil {
 		log.Fatalln(err)
 	}
 
 	defer msconn.Close()
 	defer pgconn.Close()
 
-	scanner := iokafka.NewScanner(loadKafkaConfigFromEnv(0))
+	_ = iokafka.NewScanner(loadKafkaConfigFromEnv(0))
 
-	for scanner.Scan() {
-		msg := scanner.Message()
-		if err := handleMessage(msg.Value, msg.Key); err != nil {
-			log.Println(err)
-		}
+	//DEBUG
+	s := `{"#",7433d4e8-f07d-4ace-819f-00191a4913db,431:b3c1a4bf015829f711ed05ebb7aaf42c}`
+	u := "7433d4e8-f07d-4ace-819f-00191a4913db"
+	if err := handleMessage([]byte(s), []byte(u)); err != nil {
+		log.Println(err)
 	}
+	//END
+
+	// for scanner.Scan() {
+	// 	msg := scanner.Message()
+	// 	if err := handleMessage(msg.Value, msg.Key); err != nil {
+	// 		log.Println(err)
+	// 	}
+	// }
 
 }
 
@@ -81,7 +92,7 @@ func handleMessage(content []byte, user []byte) error {
 	var (
 		tnum, ref string
 		err       error
-		version   = Version{VT: make(map[string][]map[string]string)}
+		version   = ent.Version{VT: make(map[string][]map[string]string)}
 	)
 
 	rawstr := string(content)
@@ -124,10 +135,9 @@ func handleMessage(content []byte, user []byte) error {
 		}
 	}
 	//saving version in database
-
-	record := VersionRecord{
-		User:  string(user),
-		Date: time.Now(),
+	record := ent.VersionRecord{
+		User:    string(user),
+		Date:    time.Now(),
 		Version: version,
 	}
 	if err := record.Write(tnum, ref, pgconn); err != nil {
@@ -180,6 +190,7 @@ func getHeadOfVersion(res db.Result, ref string, msconn *sql.DB) (map[string]str
 		RunWith(msconn)
 
 	mrows, err := slms.Query()
+	defer mrows.Close()
 
 	if err != nil {
 		return nil, err
@@ -203,7 +214,7 @@ func getVTOfVersion(key string, value map[string]string,
 		fields[flk] = flv
 	}
 
-	var scols string
+	scols := "CONVERT(VARCHAR(10), t1._KeyField, 2) AS _keyField,"
 	for k, v := range fields {
 		exec := mssql.SQLExec(k)
 		scols += fmt.Sprintf("%s,", exec.Get(v, "t1"))
@@ -217,6 +228,7 @@ func getVTOfVersion(key string, value map[string]string,
 		RunWith(msconn)
 
 	mrows, err := slms.Query()
+	defer mrows.Close()
 
 	if err != nil {
 		return nil, err

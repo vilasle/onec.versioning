@@ -1,9 +1,11 @@
-package main
+package entity
 
 import (
 	"database/sql"
 	"encoding/json"
 	"time"
+
+	pg "github.com/vilamslep/onec.versioning/dbms/postgres"
 )
 
 type VersionRecord struct {
@@ -23,20 +25,20 @@ func (v VersionRecord) Write(tabNum string, ref string, pgconn *sql.DB) error {
 		return err
 	}
 
-	act := PGActions{conn: pgconn, tableName: "version_" + tabNum}
+	act := pg.NewOperator(pgconn, ("version_" + tabNum))
 
-	if err := act.createTable(); err == nil {
-		err := act.addRowToVersionsRef()
+	if err := act.CreateVersionsTable(); err == nil {
+		err := act.AddRowToVersionsRef()
 		if err != nil {
 			return err
 		}
 	} else {
 		return err
 	}
-	lastId, err := act.getLastIdByRef(ref)
+	lastId, err := act.GetLastIdByRef(ref)
 	if err != nil {
 		return err
 	}
 
-	return act.addNewVersion(ref, string(content), lastId, v.Date, v.User)
+	return act.AddNewVersion(ref, string(content), lastId, v.Date, v.User)
 }
