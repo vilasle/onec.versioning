@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -19,13 +18,13 @@ type Version struct {
 	VT   map[string][]map[string]string `json:"VT"`
 }
 
-func (v VersionRecord) Write(tabNum string, ref string, pgconn *sql.DB) error {
+func (v VersionRecord) Write(tabNum string, ref string) error {
 	content, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 
-	act := pg.NewOperator(pgconn, ("version_" + tabNum))
+	act := pg.NewOperator("version_" + tabNum)
 
 	if err := act.CreateVersionsTable(); err == nil {
 		err := act.AddRowToVersionsRef()

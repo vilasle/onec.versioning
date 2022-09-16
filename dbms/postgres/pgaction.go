@@ -1,18 +1,16 @@
 package postgres
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 )
 
 type PGActions struct {
-	conn      *sql.DB
 	tableName string
 }
 
-func NewOperator(conn *sql.DB, tableName string) *PGActions {
-	return &PGActions{conn: conn, tableName: tableName}
+func NewOperator(tableName string) *PGActions {
+	return &PGActions{tableName: tableName}
 }
 
 func (act *PGActions) CreateVersionsTable() error {
@@ -20,8 +18,8 @@ func (act *PGActions) CreateVersionsTable() error {
 		id serial PRIMARY KEY, ref VARCHAR(32) NOT NULL, keywords TEXT,content TEXT NOT NULL, 
 		user_id VARCHAR(36) NOT NULL, version_timestamp TIMESTAMP NOT NULL, version_number INT NOT NULL);`, act.tableName)
 
-	_, err := act.conn.Exec(q)
-	return err
+	_, err := Session.Exec(q)
+ 	return err
 }
 
 func (act *PGActions) AddRowToVersionsRef() error {
@@ -35,7 +33,7 @@ func (act *PGActions) AddRowToVersionsRef() error {
 	WHERE NOT EXISTS (SELECT table_name FROM version_ref WHERE table_name = '%s' LIMIT 1);`,
 		act.tableName, act.tableName)
 
-	_, err := act.conn.Exec(q)
+	_, err := Session.Exec(q)
 	return err
 }
 
@@ -50,7 +48,7 @@ func (act *PGActions) GetLastIdByRef(ref string) (int, error) {
 			act.tableName)
 
 	var plug, lastId int
-	if err := act.conn.QueryRow(q, ref).Scan(&plug, &lastId); err == nil {
+	if err := Session.QueryRow(q, ref).Scan(&plug, &lastId); err == nil {
 		return lastId, nil
 	} else {
 		return 0, err
@@ -60,7 +58,7 @@ func (act *PGActions) GetLastIdByRef(ref string) (int, error) {
 func (act *PGActions) AddNewVersion(ref string, content string, lastId int, timestamp time.Time, user string) error {
 	q := fmt.Sprintf(`INSERT INTO %s (ref, content, version_number, version_timestamp, user_id) VALUES($1, $2, $3, $4, $5);`, act.tableName)
 
-	_, err := act.conn.Exec(q, ref, string(content), (lastId + 1), timestamp, user)
+	_, err := Session.Exec(q, ref, string(content), (lastId + 1), timestamp, user)
 
 	return err
 }

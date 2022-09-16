@@ -5,32 +5,27 @@ import (
 
 	"github.com/pkg/errors"
 	db "github.com/vilamslep/onec.versioning/dbms"
-	mssql "github.com/vilamslep/onec.versioning/dbms/mssql"
 	pg "github.com/vilamslep/onec.versioning/dbms/postgres"
 )
 
 var mainErr error = errors.New("can not create connections with databases")
 
-func CreateConnections() (pgconn *sql.DB, msconn *sql.DB, err error) {
+func CreateConnections() (err error) {
 
-	pgconn, pgerr := createDBConnection(pg.GetConfigFromEnv)
-	msconn, mserr := createDBConnection(mssql.GetConfigFromEnv)
+	var pgerr error
 
-	areThereErr := pgerr != nil || mserr != nil
+	pg.Session, pgerr = createDBConnection(pg.GetConfigFromEnv)
 
-	if areThereErr {
+
+	if pgerr != nil {
 		err = mainErr
 
 		if pgerr != nil {
 			err = errors.Wrap(err, pgerr.Error())
 		}
-
-		if mserr != nil {
-			err = errors.Wrap(err, mserr.Error())
-		}
 	}
 
-	return
+	return err
 }
 
 func createDBConnection(gettingConf func() (db.ConfigConnection, error)) (*sql.DB, error) {
@@ -40,3 +35,5 @@ func createDBConnection(gettingConf func() (db.ConfigConnection, error)) (*sql.D
 	}
 	return conf.NewConnection()
 }
+
+

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
+	"github.com/Masterminds/squirrel"
 	db "github.com/vilamslep/onec.versioning/dbms"
 )
+
+var Session *sql.DB
 
 type Config struct {
 	db.BasicAuth
@@ -52,4 +54,8 @@ func GetConfigFromEnv() (db.ConfigConnection, error) {
 	config.Dbname = os.Getenv("PGDBNAME")
 	 
 	return config, nil
+}
+
+func AddConnectionToBuilder(builder squirrel.SelectBuilder) squirrel.SelectBuilder {
+	return builder.RunWith(Session)
 }

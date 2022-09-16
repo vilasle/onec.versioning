@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/vilamslep/iokafka"
 	"github.com/vilamslep/onec.versioning/logger"
+	"github.com/vilamslep/onec.versioning/lib"
 )
 
 type Handler func(w http.ResponseWriter, r *http.Request) error
@@ -34,7 +34,7 @@ func getKafkaWrite() *iokafka.Writer {
 }
 
 func main() {
-	dbg_LoadEnv()
+	lib.LoadEnv("dev.env")
 
 	logger.Info("Start web service")
 
@@ -53,6 +53,10 @@ func main() {
 
 func HandlerRawProducer(wrt *iokafka.Writer) Handler {
 	return func(w http.ResponseWriter, r *http.Request) error {
+
+		if r.Body == http.NoBody {
+			return fmt.Errorf("request does not have body")
+		}
 
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -89,25 +93,8 @@ func HandlerRawProducer(wrt *iokafka.Writer) Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		} else {
-			w.Write([]byte("success"))
+			w.Write([]byte("ok"))
 		}
 		return nil
 	}
-}
-
-func dbg_LoadEnv() error {
-	f, err := os.Open("dev.env")
-	if err != nil {
-		return err
-	}
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		path := strings.Split(sc.Text(), "=")
-		if len(path) < 2 {
-			continue
-		}
-		os.Setenv(path[0], path[1])
-	}
-	return sc.Err()
 }
