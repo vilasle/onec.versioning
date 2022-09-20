@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/vilamslep/iokafka"
-	"github.com/vilamslep/onec.versioning/logger"
 	"github.com/vilamslep/onec.versioning/lib"
+	"github.com/vilamslep/onec.versioning/logger"
 )
 
 type Handler func(w http.ResponseWriter, r *http.Request) error
@@ -40,7 +40,7 @@ func main() {
 
 	wrt := getKafkaWrite()
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(logger.MiddlewareLogger())
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 
@@ -98,3 +98,4 @@ func HandlerRawProducer(wrt *iokafka.Writer) Handler {
 		return nil
 	}
 }
+

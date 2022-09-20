@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	pg "github.com/vilamslep/onec.versioning/dbms/postgres"
+	pg "github.com/vilamslep/onec.versioning/db/postgres"
 )
 
 type VersionRecord struct {

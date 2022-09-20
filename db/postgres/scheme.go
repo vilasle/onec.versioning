@@ -10,7 +10,7 @@ import (
 	"regexp"
 
 	sq "github.com/Masterminds/squirrel"
-	db "github.com/vilamslep/onec.versioning/dbms"
+	db "github.com/vilamslep/onec.versioning/db"
 )
 
 //module api

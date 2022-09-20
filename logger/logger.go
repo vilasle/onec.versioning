@@ -1,8 +1,11 @@
 package logger
 
 import (
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -40,7 +43,28 @@ func init() {
 
 	// finally construct the logger with the tee core
 	logger = zap.New(core).Sugar()
+}
 
+func MiddlewareLogger() func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+			t1 := time.Now()
+			defer func() {
+				status := ww.Status()
+				logger.Info(status)
+				logger.Info(zap.String("path", r.URL.Path),
+					zap.Int("status", ww.Status()),
+					zap.Int("size", ww.BytesWritten()),
+					zap.Any("header", ww.Header()),
+					zap.Duration("time", time.Since(t1)))
+			}()
+
+			next.ServeHTTP(ww, r)
+		}
+		return http.HandlerFunc(fn)
+	}
 }
 
 func Debug(args ...interface{}) {

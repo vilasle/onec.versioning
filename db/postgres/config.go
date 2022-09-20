@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 	"github.com/Masterminds/squirrel"
-	db "github.com/vilamslep/onec.versioning/dbms"
+	db "github.com/vilamslep/onec.versioning/db"
 )
 
 var Session *sql.DB
