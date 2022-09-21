@@ -1,6 +1,8 @@
--- CREATE TABLE version_431(
---     id SERIAL PRIMARY KEY,  
---     version_user TEXT NOT NULL,
---     created_at TIMESTAMP,
---     version_text TEXT NOT NULL
--- )
+CREATE TABLE public.versions (
+    id integer NOT NULL,
+    ref text NOT NULL,
+    version_number integer NOT NULL,
+    version_user text NOT NULL,
+    content bytea NOT NULL,
+    created_at timestamp without time zone
+);
