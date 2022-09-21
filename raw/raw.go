@@ -5,14 +5,17 @@ import (
 	"strings"
 )
 
-
-func CheckRawData(raw string) (prepdata string, ok bool) {
+func CheckRawDataUserAndRef(raw string) (predata string, ok bool) {
 	t := regexp.MustCompile(`[\d]{1,6}:[[:xdigit:]]{32}`)
-	prepdata = t.FindString(raw)
+	predata = t.FindString(raw)
 
-	ok = prepdata != ""
+	ok = predata != ""
 
 	return
+}
+
+func CheckRawDataRef(raw string) bool {
+	return regexp.MustCompile(`^{"#",+[[:xdigit:]]{8}(-[[:xdigit:]]{4}){3}-[[:xdigit:]]{12},[\d]{1,6}:[[:xdigit:]]{32}}$`).MatchString(raw)
 }
 
 func GetMainColumsAsVars(predata string) (string, string) {

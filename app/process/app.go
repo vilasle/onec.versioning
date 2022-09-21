@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,25 +15,11 @@ import (
 
 const DEBUG = true
 
-var (
-	bodyStatusErr = "error"
-	bodyStatusSuc = "success"
-)
-
-type responseBody struct {
-	Status string `json:"status"`
-	Result string `json:"result"`
-}
-
-func emptyResponseBody() responseBody {
-	return responseBody{}
-}
-
 type Version struct {
 	Ref       string
 	Number    int
 	User      string
-	Content   string
+	Content   []byte
 	CreatedAt time.Time
 }
 
@@ -107,17 +92,17 @@ func main() {
 		}
 		req.SetBasicAuth(conf.ProcessResourse.User, conf.ProcessResourse.Password)
 
-		if response, err := requestNewVersion(req); err == nil {
+		if content, err := requestNewVersion(req); err == nil {
 			version := Version{
 				Ref:       string(msg.Value),
 				User:      string(msg.Key),
-				Content:   response.Result,
+				Content:   content,
 				CreatedAt: time.Now(),
 			}
-			if err := version.SaveVersion(); err != nil {
-				logger.Error(err)
-			} else {
+			if err := version.SaveVersion(); err == nil {
 				logger.Infof("add new version. Ref %s. Number %d", version.Ref, version.Number)
+			} else {
+				logger.Error(err)
 			}
 		} else {
 			logger.Error(err)
@@ -126,43 +111,34 @@ func main() {
 	logger.Info("finish application")
 }
 
-func requestNewVersion(request *http.Request) (responseBody, error) {
+func requestNewVersion(request *http.Request) ([]byte, error) {
 
 	c := http.Client{
 		Timeout: time.Second * 300,
 	}
 
 	if res, err := c.Do(request); err != nil {
-		return emptyResponseBody(), err
+		return nil, err
 	} else {
 		if res.Body == http.NoBody {
-			return emptyResponseBody(), fmt.Errorf("response does not have body")
+			return nil, fmt.Errorf("response does not have body")
 		}
 		defer res.Body.Close()
 
 		content, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return emptyResponseBody(), err
+			return nil, err
 		}
 
 		if res.StatusCode != http.StatusOK {
-			return emptyResponseBody(), fmt.Errorf("not success request. Code %d, Body %s", res.StatusCode, content)
+			return nil, fmt.Errorf("not success request. Code %d, Body %s", res.StatusCode, content)
 		}
 
-		b := responseBody{}
-		if err := json.Unmarshal(content, &b); err != nil {
-			return emptyResponseBody(), err
-		}
-
-		if b.Status == bodyStatusSuc {
-			return b, nil
-		} else {
-			return emptyResponseBody(), fmt.Errorf("can not get version. Response body contents  %v", b)
-		}
+		return content, nil
 	}
 }
 
-func (v Version) SaveVersion() error {
+func (v *Version) SaveVersion() error {
 
 	if lastNumber, err := lib.GetLastIdByRef(v.Ref); err == nil {
 		v.Number = lastNumber + 1
